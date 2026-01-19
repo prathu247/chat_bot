@@ -19,6 +19,8 @@ import {
 
 import { appStateReducer } from './AppReducer'
 
+import { ChatMessage } from '../api'
+
 export interface AppState {
   isChatHistoryOpen: boolean
   chatHistoryLoadingState: ChatHistoryLoadingState
@@ -30,6 +32,7 @@ export interface AppState {
   feedbackState: { [answerId: string]: Feedback.Neutral | Feedback.Positive | Feedback.Negative }
   isLoading: boolean;
   answerExecResult: { [answerId: string]: [] }
+  sendMessage?: (question: ChatMessage["content"], conversationId?: string) => Promise<void>
 }
 
 export type Action =
@@ -51,6 +54,7 @@ export type Action =
   }
   | { type: 'GET_FEEDBACK_STATE'; payload: string }
   | { type: 'SET_ANSWER_EXEC_RESULT'; payload: { answerId: string, exec_result: [] } }
+  | { type: 'SET_SEND_MESSAGE_FUNCTION'; payload: (question: ChatMessage["content"], conversationId?: string) => Promise<void> }
 
 const initialState: AppState = {
   isChatHistoryOpen: false,
@@ -66,6 +70,7 @@ const initialState: AppState = {
   feedbackState: {},
   isLoading: true,
   answerExecResult: {},
+  sendMessage: undefined,
 }
 
 export const AppStateContext = createContext<

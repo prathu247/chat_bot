@@ -1,17 +1,19 @@
 import { useContext, useEffect, useState } from 'react'
-import { Link, Outlet } from 'react-router-dom'
+import { Link, Outlet, useNavigate } from 'react-router-dom'
 import { Dialog, Stack, TextField } from '@fluentui/react'
 import { CopyRegular } from '@fluentui/react-icons'
 
 import { CosmosDBStatus } from '../../api'
 import Contoso from '../../assets/Contoso.svg'
 import { HistoryButton, ShareButton } from '../../components/common/Button'
+import { DocumentUploadButton, DocumentUploadDialog } from '../../components/DocumentUpload'
 import { AppStateContext } from '../../state/AppProvider'
 
 import styles from './Layout.module.css'
 
 const Layout = () => {
   const [isSharePanelOpen, setIsSharePanelOpen] = useState<boolean>(false)
+  const [isDocumentUploadOpen, setIsDocumentUploadOpen] = useState<boolean>(false)
   const [copyClicked, setCopyClicked] = useState<boolean>(false)
   const [copyText, setCopyText] = useState<string>('Copy URL')
   const [shareLabel, setShareLabel] = useState<string | undefined>('Share')
@@ -20,6 +22,7 @@ const Layout = () => {
   const [logo, setLogo] = useState('')
   const appStateContext = useContext(AppStateContext)
   const ui = appStateContext?.state.frontendSettings?.ui
+  const navigate = useNavigate()
 
   const handleShareClick = () => {
     setIsSharePanelOpen(true)
@@ -38,6 +41,31 @@ const Layout = () => {
 
   const handleHistoryClick = () => {
     appStateContext?.dispatch({ type: 'TOGGLE_CHAT_HISTORY' })
+  }
+
+  const handleDocumentUploadClick = () => {
+    setIsDocumentUploadOpen(true)
+  }
+
+  const handleDocumentUploadDismiss = () => {
+    setIsDocumentUploadOpen(false)
+  }
+
+  const handleDocumentProcessed = async (documentText: string) => {
+    // Use the sendMessage function exposed by Chat component through context
+    const sendMessage = appStateContext?.state.sendMessage
+    if (!sendMessage) {
+      throw new Error('Chat is not ready. Please try again.')
+    }
+    
+    try {
+      // Call the same function that Chat component uses
+      await sendMessage(documentText)
+      // Navigate to chat page to see the response
+      navigate('/')
+    } catch (error: any) {
+      throw error
+    }
   }
 
   useEffect(() => {
@@ -91,6 +119,7 @@ const Layout = () => {
               />
             )}
             {ui?.show_share_button && <ShareButton onClick={handleShareClick} text={shareLabel} />}
+            <DocumentUploadButton onClick={handleDocumentUploadClick} text="Upload Document" />
           </Stack>
         </Stack>
       </header>
@@ -132,6 +161,11 @@ const Layout = () => {
           </div>
         </Stack>
       </Dialog>
+      <DocumentUploadDialog
+        isOpen={isDocumentUploadOpen}
+        onDismiss={handleDocumentUploadDismiss}
+        onDocumentProcessed={handleDocumentProcessed}
+      />
     </div>
   )
 }

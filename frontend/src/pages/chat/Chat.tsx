@@ -638,6 +638,19 @@ const Chat = () => {
     }
   }, [appStateContext?.state.currentChat])
 
+  // Expose the API request function through context so Layout can use it
+  useEffect(() => {
+    const sendMessage = async (question: ChatMessage["content"], conversationId?: string) => {
+      if (appStateContext?.state.isCosmosDBAvailable?.cosmosDB) {
+        await makeApiRequestWithCosmosDB(question, conversationId)
+      } else {
+        await makeApiRequestWithoutCosmosDB(question, conversationId)
+      }
+    }
+    appStateContext?.dispatch({ type: 'SET_SEND_MESSAGE_FUNCTION', payload: sendMessage })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appStateContext?.state.isCosmosDBAvailable?.cosmosDB])
+
   useLayoutEffect(() => {
     const saveToDB = async (messages: ChatMessage[], id: string) => {
       const response = await historyUpdate(messages, id)
