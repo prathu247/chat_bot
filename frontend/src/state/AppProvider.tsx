@@ -33,6 +33,7 @@ export interface AppState {
   isLoading: boolean;
   answerExecResult: { [answerId: string]: [] }
   sendMessage?: (question: ChatMessage["content"], conversationId?: string) => Promise<void>
+  showDocumentUploadWelcome?: boolean
 }
 
 export type Action =
@@ -55,6 +56,7 @@ export type Action =
   | { type: 'GET_FEEDBACK_STATE'; payload: string }
   | { type: 'SET_ANSWER_EXEC_RESULT'; payload: { answerId: string, exec_result: [] } }
   | { type: 'SET_SEND_MESSAGE_FUNCTION'; payload: (question: ChatMessage["content"], conversationId?: string) => Promise<void> }
+  | { type: 'SHOW_DOCUMENT_UPLOAD_WELCOME' }
 
 const initialState: AppState = {
   isChatHistoryOpen: false,
@@ -71,6 +73,7 @@ const initialState: AppState = {
   isLoading: true,
   answerExecResult: {},
   sendMessage: undefined,
+  showDocumentUploadWelcome: false,
 }
 
 export const AppStateContext = createContext<

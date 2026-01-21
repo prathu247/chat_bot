@@ -1,0 +1,52 @@
+.welcomeMessageContainer {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 12px;
+}
+
+.welcomeMessage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  background: #edf5fd;
+  border-radius: 8px;
+  box-shadow:
+    0px 2px 4px rgba(0, 0, 0, 0.14),
+    0px 0px 2px rgba(0, 0, 0, 0.12);
+  max-width: 80%;
+  min-width: 300px;
+}
+
+.welcomeTitle {
+  font-style: normal;
+  font-weight: 600;
+  font-size: 18px;
+  line-height: 24px;
+  color: #242424;
+  margin: 0 0 12px 0;
+}
+
+.welcomeText {
+  font-style: normal;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 22px;
+  color: #616161;
+  margin: 0 0 16px 0;
+}
+
+.buttonContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.downloadButton {
+  width: 100%;
+}
+
+.uploadButton {
+  width: 100%;
+}
+

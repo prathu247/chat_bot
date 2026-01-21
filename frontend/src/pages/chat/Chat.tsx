@@ -36,6 +36,7 @@ import {
 import { Answer } from "../../components/Answer";
 import { QuestionInput } from "../../components/QuestionInput";
 import { ChatHistoryPanel } from "../../components/ChatHistory/ChatHistoryPanel";
+import { DocumentUploadWelcomeMessage, DocumentUploadDialog } from "../../components/DocumentUpload";
 import { AppStateContext } from "../../state/AppProvider";
 import { useBoolean } from "@fluentui/react-hooks";
 
@@ -65,6 +66,7 @@ const Chat = () => {
   const [errorMsg, setErrorMsg] = useState<ErrorMessage | null>()
   const [logo, setLogo] = useState('')
   const [answerId, setAnswerId] = useState<string>('')
+  const [showUploadDialog, setShowUploadDialog] = useState<boolean>(false)
 
   const errorDialogContentProps = {
     type: DialogType.close,
@@ -82,6 +84,15 @@ const Chat = () => {
 
   const [ASSISTANT, TOOL, ERROR] = ['assistant', 'tool', 'error']
   const NO_CONTENT_ERROR = 'No content in messages object.'
+  const DOCUMENT_UPLOAD_WELCOME = 'DOCUMENT_UPLOAD_WELCOME'
+
+  // Helper function to filter out error messages and welcome messages before sending to backend
+  const filterMessagesForBackend = (messages: ChatMessage[]): ChatMessage[] => {
+    return messages.filter(message => 
+      message.role !== ERROR && 
+      (typeof message.content !== 'string' || message.content !== DOCUMENT_UPLOAD_WELCOME)
+    )
+  }
 
   useEffect(() => {
     if (
@@ -220,7 +231,7 @@ const Chat = () => {
     setMessages(conversation.messages)
 
     const request: ConversationRequest = {
-      messages: [...conversation.messages.filter(answer => answer.role !== ERROR)]
+      messages: filterMessagesForBackend(conversation.messages)
     }
 
     let result = {} as ChatResponse
@@ -334,12 +345,12 @@ const Chat = () => {
       } else {
         conversation.messages.push(userMessage)
         request = {
-          messages: [...conversation.messages.filter(answer => answer.role !== ERROR)]
+          messages: filterMessagesForBackend(conversation.messages)
         }
       }
     } else {
       request = {
-        messages: [userMessage].filter(answer => answer.role !== ERROR)
+        messages: filterMessagesForBackend([userMessage])
       }
       setMessages(request.messages)
     }
@@ -620,9 +631,74 @@ const Chat = () => {
     setIsCitationPanelOpen(false)
     setIsIntentsPanelOpen(false)
     setActiveCitation(undefined)
+    setShowUploadDialog(false)
     appStateContext?.dispatch({ type: 'UPDATE_CURRENT_CHAT', payload: null })
     setProcessMessages(messageStatus.Done)
   }
+
+  const handleDownloadSample = async () => {
+    try {
+      // Fetch the sample file from public folder
+      // The file should be placed at: frontend/public/sample-document.docx
+      const response = await fetch('/sample-document.docx')
+      if (!response.ok) {
+        throw new Error('Failed to fetch sample file')
+      }
+      
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'sample-document.docx'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error downloading sample file:', error)
+      // Fallback: show error message to user
+      alert('Failed to download sample file. Please ensure sample-document.docx exists in the public folder.')
+    }
+  }
+
+  const handleDocumentProcessed = async (documentText: string) => {
+    const sendMessage = appStateContext?.state.sendMessage
+    if (sendMessage) {
+      await sendMessage(documentText)
+    }
+  }
+
+  // Handle showing document upload welcome message as assistant message
+  useEffect(() => {
+    if (appStateContext?.state.showDocumentUploadWelcome) {
+      const welcomeMessage: ChatMessage = {
+        id: uuid(),
+        role: 'assistant',
+        content: DOCUMENT_UPLOAD_WELCOME,
+        date: new Date().toISOString()
+      }
+      setMessages(prev => [...prev, welcomeMessage])
+      // Update current chat if it exists
+      if (appStateContext.state.currentChat) {
+        const updatedChat = {
+          ...appStateContext.state.currentChat,
+          messages: [...appStateContext.state.currentChat.messages, welcomeMessage]
+        }
+        appStateContext?.dispatch({ type: 'UPDATE_CURRENT_CHAT', payload: updatedChat })
+      } else {
+        // Create new chat if none exists
+        const newChat: Conversation = {
+          id: uuid(),
+          title: 'Document Upload',
+          messages: [welcomeMessage],
+          date: new Date().toISOString()
+        }
+        appStateContext?.dispatch({ type: 'UPDATE_CURRENT_CHAT', payload: newChat })
+      }
+      // Reset the flag by toggling it
+      appStateContext?.dispatch({ type: 'SHOW_DOCUMENT_UPLOAD_WELCOME' })
+    }
+  }, [appStateContext?.state.showDocumentUploadWelcome])
 
   const stopGenerating = () => {
     abortFuncs.current.forEach(a => a.abort())
@@ -653,7 +729,9 @@ const Chat = () => {
 
   useLayoutEffect(() => {
     const saveToDB = async (messages: ChatMessage[], id: string) => {
-      const response = await historyUpdate(messages, id)
+      // Filter out welcome messages and error messages before saving
+      const filteredMessages = filterMessagesForBackend(messages)
+      const response = await historyUpdate(filteredMessages, id)
       return response
     }
 
@@ -820,7 +898,12 @@ const Chat = () => {
                       </div>
                     ) : answer.role === 'assistant' ? (
                       <div className={styles.chatMessageGpt}>
-                        {typeof answer.content === "string" && <Answer
+                        {typeof answer.content === "string" && answer.content === DOCUMENT_UPLOAD_WELCOME ? (
+                          <DocumentUploadWelcomeMessage
+                            onDownloadSample={handleDownloadSample}
+                            onUploadClick={() => setShowUploadDialog(true)}
+                          />
+                        ) : typeof answer.content === "string" && <Answer
                           answer={{
                             answer: answer.content,
                             citations: parseCitationFromMessage(messages[index - 1]),
@@ -1049,6 +1132,11 @@ const Chat = () => {
             appStateContext?.state.isCosmosDBAvailable?.status !== CosmosDBStatus.NotConfigured && <ChatHistoryPanel />}
         </Stack>
       )}
+      <DocumentUploadDialog
+        isOpen={showUploadDialog}
+        onDismiss={() => setShowUploadDialog(false)}
+        onDocumentProcessed={handleDocumentProcessed}
+      />
     </div>
   )
 }

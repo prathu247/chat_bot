@@ -43,8 +43,16 @@ const Layout = () => {
     appStateContext?.dispatch({ type: 'TOGGLE_CHAT_HISTORY' })
   }
 
-  const handleDocumentUploadClick = () => {
-    setIsDocumentUploadOpen(true)
+  const handleDocumentUploadClick = async () => {
+    // Navigate to chat and trigger welcome message display
+    navigate('/')
+    // Use a small delay to ensure Chat component is mounted, then trigger welcome message
+    setTimeout(() => {
+      // Dispatch an action to show welcome message as assistant message
+      appStateContext?.dispatch({ 
+        type: 'SHOW_DOCUMENT_UPLOAD_WELCOME' 
+      })
+    }, 100)
   }
 
   const handleDocumentUploadDismiss = () => {

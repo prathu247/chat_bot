@@ -87,6 +87,12 @@ export const appStateReducer = (state: AppState, action: Action): AppState => {
         ...state,
         sendMessage: action.payload
       }
+    case 'SHOW_DOCUMENT_UPLOAD_WELCOME':
+      // Toggle the flag - if it's already true, set to false to allow re-triggering
+      return {
+        ...state,
+        showDocumentUploadWelcome: !state.showDocumentUploadWelcome
+      }
     default:
       return state
   }
